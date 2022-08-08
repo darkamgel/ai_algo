@@ -7,17 +7,20 @@ M, C, P = 3, 3, 0
 State = Tuple[int, int, int]
 Action = Tuple[int, int]
 
+
 class MissionariesCannibal:
     __graph_matrix: List[List[State]]
     __possible_actions: List[Action]
+    __visited: List[State]
 
     def __init__(self) -> None:
         __ini_state = (M, C, P)
         self.__graph_matrix: List[List[State]] = [[(__ini_state)]]
-        self.__possible_actions: List[Action] = [(0, 1), (1, 0), (1, 1), (2, 0), (0, 2)]
+        self.__possible_actions: List[Action] = [
+            (0, 1), (1, 0), (1, 1), (2, 0), (0, 2)]
         self.f = graphviz.Digraph('finite_state_machine', filename='fsm.gv')
-        self.node_format = "[{}, {}, {}]"
-
+        self.__node_format = "[{}, {}, {}]"
+        self.__visited = []
 
     def isGoalState(self, state: State) -> bool:
         m, c, _ = state
@@ -26,13 +29,21 @@ class MissionariesCannibal:
     def isValidState(self, state: State, action: Action) -> State | bool:
         m, c, p = state
         _m, _c = action
-        m -= _m
-        c -= _c
+
+        if p == 0:
+            m -= _m
+            c -= _c
+        else:
+            m += _m
+            c += _c
+        if m > 3 or c > 3:
+            return False
         if m < 0 or c < 0:
             return False
         if m < c:
             return False
-        return (m, c, int(not bool(p)))
+        state = (m, c, int(not bool(p)))
+        return state
 
     def addNode(self, current: State, child: State, action: Action, isGoal: bool) -> None:
         pc, pm, pp = current
@@ -41,20 +52,25 @@ class MissionariesCannibal:
         self.f.attr("node", shape="circle")
         if isGoal:
             self.f.attr("node", shape="doublecircle")
-        self.f.edge(self.node_format.format(pc, pm, pp),
-                    self.node_format.format(cc, cm, cp),
+        self.f.edge(self.__node_format.format(pc, pm, pp),
+                    self.__node_format.format(cc, cm, cp),
                     label="({}, {})".format(ac, am))
 
     def generateNextStates(self, state: State) -> List[State]:
         states: List[State] = []
+        if self.__visited.count(state):
+            return []
         for ac in self.__possible_actions:
             valid_state = self.isValidState(state, ac)
             if valid_state:
+                if self.__visited.count(valid_state):
+                    continue
                 states.append(valid_state)
                 goal = self.isGoalState(valid_state)
                 self.addNode(state, valid_state, ac, isGoal=goal)
                 if goal:
                     break
+        self.__visited.append(state)
         return states
 
     def solve(self):
@@ -75,7 +91,7 @@ class MissionariesCannibal:
                         break
             row += 1
             self.__graph_matrix.append(states)
-        self.f.view()
+        self.f.render(filename="missionaries_cannibals", format="png", view=True)
         return self.__graph_matrix
 
 
